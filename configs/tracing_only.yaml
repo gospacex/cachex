@@ -1,0 +1,18 @@
+# cachex — Trace-only configuration (no backend block).
+# Use with cachex.InitTracing("configs/tracing_only.yaml") when the
+# service has no cache backend but still wants to ship spans.
+trace:
+  enabled: true
+  service_name: ${env:MQ_SERVICE_NAME:-cachex-tracing}
+  exporter: ${env:MQ_TRACE_BACKEND:-redis_stream}
+  endpoint: ${env:MQ_OTLP_ENDPOINT:-http://localhost:4318}
+  insecure: true
+  protocol: ${env:MQ_TRACE_PROTOCOL:-grpc}
+  sampler_type: ${env:MQ_SAMPLER_TYPE:-always_on}
+  sampler_ratio: 1.0
+  # When exporter=redis_stream, the trace exporter publishes to this stream.
+  stream: ${env:TRACE_REDIS_STREAM:-trace:cachex:single}
+  # When exporter=kafka_topic, the trace exporter writes to this topic.
+  topic: ${env:TRACE_KAFKA_TOPIC:-trace-spans-cachex}
+  brokers:
+    - ${env:KAFKA_BROKER:-localhost:9092}

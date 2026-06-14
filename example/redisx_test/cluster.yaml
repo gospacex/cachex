@@ -1,0 +1,49 @@
+# cachex — Redis cluster backend + trace export.
+#
+# Mirror of mqx's example/redisx_test/mq.yaml#redis_cluster, adapted to
+# cachex's flat Config schema (NOT mqx's nested redis_single:/redis_cluster:
+# section split — cachex uses one Config per file).
+#
+# Loaded by example/redisx_test/e2e_test.go for the cluster-topology half
+# of the 6 combinations (3 trace backends × {single, cluster}). Placeholders
+# follow OTel confmap syntax: ${env:VAR} and ${env:VAR:-default}. Only
+# string fields support ${env:...} placeholders; go-yaml.v3 strictly
+# rejects them on bool / int / float fields.
+backend: redis
+driver: redis
+cluster_mode: true
+addrs:
+  - ${env:CACHEX_REDIS_CLUSTER_NODE1:-localhost:7000}
+  - ${env:CACHEX_REDIS_CLUSTER_NODE2:-localhost:7001}
+  - ${env:CACHEX_REDIS_CLUSTER_NODE3:-localhost:7002}
+password: ${env:CACHEX_REDIS_PASSWORD:-}
+db: 0
+pool_size: 20
+min_idle_conns: 5
+max_retries: 3
+dial_timeout: 5
+read_timeout: 3
+write_timeout: 3
+idle_timeout: 60
+pool_timeout: 4
+metrics: true
+metrics_prefix: cachex-redis-cluster
+logger:
+  level: info
+  format: json
+  output: stdout
+trace:
+  enabled: true
+  service_name: ${env:MQ_SERVICE_NAME:-cachex-redis-cluster}
+  exporter: ${env:MQ_TRACE_BACKEND:-jaeger}
+  endpoint: ${env:JAEGER_ENDPOINT:-http://localhost:14268/api/traces}
+  insecure: true
+  protocol: ${env:MQ_TRACE_PROTOCOL:-grpc}
+  sampler_type: always_on
+  sampler_ratio: 1.0
+  # When exporter=redis_stream, the trace exporter publishes to this stream.
+  stream: ${env:TRACE_REDIS_STREAM:-trace:cachex:redis:cluster}
+  # When exporter=kafka_topic, the trace exporter writes to this topic.
+  topic: ${env:TRACE_KAFKA_TOPIC:-trace-spans-cachex-redis}
+  brokers:
+    - ${env:KAFKA_BROKER:-localhost:9092}

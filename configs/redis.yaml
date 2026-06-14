@@ -1,0 +1,52 @@
+# cachex — Redis backend + trace export (new schema, mqx-aligned).
+# Placeholders follow OTel confmap syntax: ${env:VAR} and ${env:VAR:-default}.
+# Note: only string fields support ${env:...} placeholders; go-yaml.v3
+# strictly rejects placeholders on bool / int / float fields. Toggle
+# trace.enabled via MQ_TRACE_ENABLED in Go code (config_loader.go helper).
+# Load with: cachex.LoadConfig("configs/redis.yaml")
+backend: redis
+driver: redis
+addrs:
+  - ${env:CACHEX_ADDRS:-localhost:6379}
+password: ${env:CACHEX_PASSWORD:-}
+db: 0
+pool_size: 20
+min_idle_conns: 5
+max_retries: 3
+dial_timeout: 5
+read_timeout: 3
+write_timeout: 3
+idle_timeout: 60
+pool_timeout: 4
+cluster_mode: false
+tls:
+  enabled: false
+  ca_file: ""
+  cert_file: ""
+  key_file: ""
+  insecure_skip_verify: false
+circuit_breaker:
+  enabled: true
+  threshold: 5
+  timeout: 30
+  half_open_max_requests: 3
+metrics: true
+metrics_prefix: cachex
+logger:
+  level: info
+  format: json
+  output: stdout
+trace:
+  enabled: true
+  service_name: ${env:MQ_SERVICE_NAME:-cachex-redis}
+  exporter: ${env:MQ_TRACE_BACKEND:-jaeger}
+  endpoint: ${env:MQ_JAEGER_ENDPOINT:-http://localhost:14268/api/traces}
+  insecure: true
+  protocol: ${env:MQ_TRACE_PROTOCOL:-grpc}
+  sampler_type: ${env:MQ_SAMPLER_TYPE:-always_on}
+  sampler_ratio: 1.0
+  # Backend-specific destinations (used when exporter=redis_stream or kafka_topic):
+  stream: ${env:TRACE_REDIS_STREAM:-trace:cachex:redis}
+  topic: ${env:TRACE_KAFKA_TOPIC:-trace-spans-cachex}
+  brokers:
+    - ${env:KAFKA_BROKER:-localhost:9092}

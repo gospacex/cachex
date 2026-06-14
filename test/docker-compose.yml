@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis-cluster:
+    image: redis:7-alpine
+    ports:
+      - "7000:7000"
+      - "7001:7001"
+      - "7002:7002"
+    volumes:
+      - ./redis-cluster.sh:/redis-cluster.sh
+    command: >
+      sh -c "
+        apt-get update && apt-get install -y redis-tools &&
+        chmod +x /redis-cluster.sh &&
+        /redis-cluster.sh
+      "
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "7000", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  dragonfly:
+    image: docker.io/alpine/dragonfly:latest
+    ports:
+      - "6380:6380"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  keydb:
+    image: eqalpha/keydb:x86_64_v6.3.1
+    ports:
+      - "6390:6379"
+    command: keydb-server --save '' --appendonly no
+    healthcheck:
+      test: ["CMD", "keydb-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:

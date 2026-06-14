@@ -1,0 +1,49 @@
+# cachex — kafkax e2e single-broker config.
+#
+# The kafkax_test exercises the trace pipeline that ships spans to kafka
+# (or jaeger / redis stream) under a local in-memory cachex cache. The
+# local store uses badger in-memory mode so Set/Get roundtrip works
+# without touching the host filesystem. The trace: block is what the
+# test actually verifies — backend-specific destinations (stream,
+# topic, brokers) are wired through ${env:...} placeholders so the
+# same yaml drives all 6 combinations (3 backends x 2 topologies).
+#
+# Mode C (env-var driven): e2e_test.go sets MQ_TRACE_BACKEND before
+# cachex.LoadConfig so the trace: exporter switches between
+# jaeger / redis_stream / kafka_topic without rebuilding the file.
+#
+# Load with: cachex.LoadConfig("example/kafkax_test/kafka_single.yaml")
+backend: badger
+in_memory: true
+dir: ""
+value_dir: ""
+sync_writes: false
+read_only: false
+bypass_lock_guard: true
+value_threshold: 0
+value_log_file_size: 1048576
+block_cache_size: 268435456
+index_cache_size: 134217728
+mem_table_size: 67108864
+mmap_size: 67108864
+compression: false
+metrics: true
+metrics_prefix: cachex-kafka-single
+logger:
+  level: info
+  format: json
+  output: stdout
+trace:
+  enabled: true
+  service_name: ${env:MQ_SERVICE_NAME:-cachex-kafka-single}
+  exporter: ${env:MQ_TRACE_BACKEND:-kafka_topic}
+  endpoint: ${env:JAEGER_ENDPOINT:-http://localhost:14268/api/traces}
+  insecure: true
+  protocol: ${env:MQ_TRACE_PROTOCOL:-grpc}
+  sampler_type: always_on
+  sampler_ratio: 1.0
+  # Backend-specific destinations (used when exporter=redis_stream or kafka_topic):
+  stream: ${env:TRACE_REDIS_STREAM:-trace:cachex:kafka:single}
+  topic: ${env:TRACE_KAFKA_TOPIC:-trace-spans-cachex-kafka}
+  brokers:
+    - ${env:KAFKA_BROKER:-localhost:19092}

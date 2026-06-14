@@ -1,0 +1,48 @@
+# cachex — kafkax e2e cluster-broker config.
+#
+# Mirror of kafka_single.yaml but targeting a 3-broker kafka cluster
+# (KAFKA_BROKER_NODE1..3) and prefixed service_name / metrics_prefix /
+# stream so the 2 topology variants stay distinguishable in
+# jaeger / redis / kafka observability UIs.
+#
+# Mode C (env-var driven): e2e_test.go sets MQ_TRACE_BACKEND before
+# cachex.LoadConfig so the trace: exporter switches between
+# jaeger / redis_stream / kafka_topic without rebuilding the file.
+#
+# Load with: cachex.LoadConfig("example/kafkax_test/kafka_cluster.yaml")
+backend: badger
+in_memory: true
+dir: ""
+value_dir: ""
+sync_writes: false
+read_only: false
+bypass_lock_guard: true
+value_threshold: 0
+value_log_file_size: 1048576
+block_cache_size: 268435456
+index_cache_size: 134217728
+mem_table_size: 67108864
+mmap_size: 67108864
+compression: false
+metrics: true
+metrics_prefix: cachex-kafka-cluster
+logger:
+  level: info
+  format: json
+  output: stdout
+trace:
+  enabled: true
+  service_name: ${env:MQ_SERVICE_NAME:-cachex-kafka-cluster}
+  exporter: ${env:MQ_TRACE_BACKEND:-kafka_topic}
+  endpoint: ${env:JAEGER_ENDPOINT:-http://localhost:14268/api/traces}
+  insecure: true
+  protocol: ${env:MQ_TRACE_PROTOCOL:-grpc}
+  sampler_type: always_on
+  sampler_ratio: 1.0
+  # Backend-specific destinations (used when exporter=redis_stream or kafka_topic):
+  stream: ${env:TRACE_REDIS_STREAM:-trace:cachex:kafka:cluster}
+  topic: ${env:TRACE_KAFKA_TOPIC:-trace-spans-cachex-kafka}
+  brokers:
+    - ${env:KAFKA_BROKER_NODE1:-localhost:19092}
+    - ${env:KAFKA_BROKER_NODE2:-localhost:19093}
+    - ${env:KAFKA_BROKER_NODE3:-localhost:19094}

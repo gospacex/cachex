@@ -1,0 +1,41 @@
+# cachex — Badger embedded backend + trace export (new schema, mqx-aligned).
+# Load with: cachex.LoadConfig("configs/badger.yaml")
+backend: badger
+dir: ${env:BADGER_PATH:-/tmp/cachex-badger}
+value_dir: ${env:BADGER_VALUE_DIR:-/tmp/cachex-badger}
+file_mode: 384
+mmap_size: 67108864
+read_only: false
+sync_writes: false
+in_memory: false
+block_cache_size: 268435456
+index_cache_size: 134217728
+mem_table_size: 67108864
+compression: false
+value_log_file_size: 1048576
+value_threshold: 0
+bypass_lock_guard: true
+circuit_breaker:
+  enabled: true
+  threshold: 5
+  timeout: 30
+  half_open_max_requests: 3
+metrics: true
+metrics_prefix: cachex
+logger:
+  level: info
+  format: json
+  output: stdout
+trace:
+  enabled: true
+  service_name: ${env:MQ_SERVICE_NAME:-cachex-badger}
+  exporter: ${env:MQ_TRACE_BACKEND:-jaeger}
+  endpoint: ${env:MQ_JAEGER_ENDPOINT:-http://localhost:14268/api/traces}
+  insecure: true
+  protocol: ${env:MQ_TRACE_PROTOCOL:-grpc}
+  sampler_type: ${env:MQ_SAMPLER_TYPE:-always_on}
+  sampler_ratio: 1.0
+  stream: ${env:TRACE_REDIS_STREAM:-trace:cachex:badger}
+  topic: ${env:TRACE_KAFKA_TOPIC:-trace-spans-cachex}
+  brokers:
+    - ${env:KAFKA_BROKER:-localhost:9092}
