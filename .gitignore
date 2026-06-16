@@ -1,0 +1,16 @@
+# Build outputs at repo root
+/object
+/path
+
+# Tooling state
+/.omc/
+
+# Common Go build outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
