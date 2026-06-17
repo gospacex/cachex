@@ -1,11 +1,13 @@
 module github.com/gospacex/cachex
 
-go 1.21
+go 1.26.2
 
 require (
 	github.com/IBM/sarama v1.41.2
 	github.com/cockroachdb/pebble v1.0.0
 	github.com/dgraph-io/badger/v4 v4.5.1
+	github.com/gospacex/hubx v0.0.0-00010101000000-000000000000
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/redis/go-redis/v9 v9.3.1
 	github.com/stretchr/testify v1.10.0
@@ -19,6 +21,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace github.com/gospacex/hubx => ../hubx
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -64,7 +68,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	google.golang.org/grpc v1.59.0 // indirect
 	google.golang.org/protobuf v1.36.3 // indirect
 )
