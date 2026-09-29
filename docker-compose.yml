@@ -1,0 +1,68 @@
+# cachex - Cache Docker Compose
+# 提取自 legoB，简化为单机开发用
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  redis:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis/redis-stack:8.4
+    cpus: "1.0"
+    container_name: hubx-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass redis123456 --appendonly yes --loglevel notice
+    volumes:
+      - ./data/redis/data:/data
+      - ./data/redis/logs:/logs
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis123456", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *default-logging
+
+  memcached:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/memcached:alpine
+    cpus: "0.5"
+    container_name: hubx-memcached
+    ports:
+      - "21121:11211"
+    command: memcached -u memcached -m 128 -p 11211
+    volumes:
+      - ./data/memcached:/var/lib/memcached
+    healthcheck:
+      test: ["CMD-SHELL", "echo stats | nc -w 2 127.0.0.1 11211 | grep -q STAT"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *default-logging
+
+  # 注：KeyDB / Dragonfly 驱动已在本 SDK 中移除（与 go-redis/v8 冗余），
+  # 二者兼容 RESP 协议，需要时用 driver: redis 接入即可。
+  jaeger:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/jaegertracing/all-in-one:1.62.0
+    cpus: "0.5"
+    container_name: hubx-jaeger
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *default-logging
+
+networks:
+  default:
+    name: hubx-cachex-net
+    driver: bridge

@@ -1,0 +1,25 @@
+# cachex Redis 示例配置
+# 本地环境：docker compose up -d 启动 redis（redis/redis-stack:8.4）
+# 容器端口映射：localhost:46379 → 容器内 6379
+
+cachex:
+  tracing:
+    enabled: true
+    exporter: jaeger           # "jaeger" | "jaeger-grpc" | "kafka"
+    jaeger_endpoint: "localhost:4318"
+    insecure: true
+    service_name: "cachex-tracing-example"
+    service_version: "0.1.0"
+
+  instances:
+    - name: redis-primary
+      driver: redis
+      addr: "localhost:46379"
+      password: "redis123456"
+      db: 0
+      pool_size: 20
+      min_idle_conn: 5
+      timeout: 5s
+      read_timeout: 3s
+      write_timeout: 3s
+      tls_enabled: false

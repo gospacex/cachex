@@ -1,0 +1,84 @@
+# cachex 企业级配置参考
+# 使用方式：configx 加载后调用 cachex.Init(cachex.WithConfigFile("config.yaml"))
+# 环境变量占位符：${ENV_VAR} 形式，Init 时自动展开
+
+cachex:
+  # ===== 全局调用链开关 =====
+  tracing:
+    # 开启后所有缓存命令自动产生 OTel span 并异步批量上报
+    enabled: true
+    exporter: jaeger              # "jaeger"(OTLP/HTTP) | "jaeger-grpc"(OTLP/gRPC) | "kafka"
+    jaeger_endpoint: "localhost:4318"
+    insecure: true
+    service_name: "cachex"
+    service_version: "0.1.0"
+    sampler_ratio: 1.0            # 1.0 全采；生产高 QPS 建议 0.01~0.1
+    batch_size: 512
+
+  # ===== 缓存实例配置 =====
+  instances:
+    # —— Redis 单机模式 ——
+    - name: redis-primary
+      driver: redis
+      addr: "localhost:46379"
+      password: "redis123456"     # 本地 docker-compose 密码；生产环境改用 ${REDIS_PASSWORD}
+      db: 0
+      pool_size: 20
+      min_idle_conn: 5
+      timeout: 5s
+      read_timeout: 3s            # 读超时（可选，不填则复用 timeout）
+      write_timeout: 3s           # 写超时（可选）
+      tls_enabled: false
+
+    # —— Redis Sentinel 模式 ——
+    - name: redis-sentinel
+      driver: redis
+      sentinel_master: mymaster
+      sentinel_addrs: "localhost:26379,localhost:26380"
+      password: "${SENTINEL_PASSWORD}"
+      pool_size: 20
+      min_idle_conn: 5
+      timeout: 5s
+      read_timeout: 3s
+      write_timeout: 3s
+      tls_enabled: false
+
+    # —— Redis Cluster 模式 ——
+    - name: redis-cluster
+      driver: redis
+      cluster: "localhost:7000,localhost:7001,localhost:7002"
+      password: "${CLUSTER_PASSWORD}"
+      pool_size: 30
+      min_idle_conn: 10
+      timeout: 5s
+      read_timeout: 3s
+      write_timeout: 3s
+      tls_enabled: false
+
+    # —— Memcached 单节点 ——
+    - name: memcached-primary
+      driver: memcached
+      addr: "localhost:21121"
+      pool_size: 10
+      min_idle_conn: 3
+      timeout: 3s
+
+    # —— Memcached 多节点（客户端分片）——
+    - name: memcached-cluster
+      driver: memcached
+      addr: "localhost:21121,localhost:21122,localhost:21123"
+      pool_size: 30
+      min_idle_conn: 10
+      timeout: 3s
+
+# ============================================================================
+# 本地开发：
+#   docker compose up -d                      # 起 redis(46379) + memcached(21121)
+#   export REDIS_PASSWORD=redis123456
+#   go run ./examples/redis/main.go
+#   go run ./examples/memcached/main.go
+#
+# 注意：sentinel / cluster 两组实例本地没有对应容器，仅作为配置写法参考。
+# 实际使用时要么补齐容器，要么从本地配置中移除，否则 Init 会因建连失败而报错。
+# KeyDB / Dragonfly 与 Redis 协议兼容，需要时直接把 driver 填 redis 即可。
+# ============================================================================

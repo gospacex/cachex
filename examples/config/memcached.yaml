@@ -1,0 +1,20 @@
+# cachex Memcached 示例配置
+# 本地环境：docker-compose up -d 启动 memcached
+# 容器端口映射：localhost:21121 → 11211
+
+cachex:
+  tracing:
+    enabled: true
+  metrics:
+    addr: ":9100"
+    path: "/metrics"
+
+  instances:
+    - name: memcached-primary
+      driver: memcached
+      addr: "localhost:21121"
+      pool_size: 10
+      min_idle_conn: 3
+      timeout: 3s
+      read_timeout: 2s
+      write_timeout: 2s
