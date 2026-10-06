@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -10,13 +11,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// 测试用的 Redis 地址/密码走环境变量，默认对齐 dockers/docker-compose.yml 收编
+// 后的**唯一** redis（6379，无密码）。
+//
+// 为什么改：原先硬编码 127.0.0.1:46379 + redis123456，那是收编前 cachex 自带
+// compose 的专属实例；收编后本机只有 6379 且未设 requirepass，整包测试因此
+// 全部卡在 "ping failed: dial tcp 127.0.0.1:46379"。测试要跟着环境走，而不是
+// 让每个人先去猜一个已经不存在的端口。
+func testRedisAddr() string {
+	if v := os.Getenv("CACHEX_TEST_REDIS_ADDR"); v != "" {
+		return v
+	}
+	return "127.0.0.1:6379"
+}
+
+func testRedisPassword() string {
+	return os.Getenv("CACHEX_TEST_REDIS_PASSWORD")
+}
+
 func newTestClient(t *testing.T) *Client {
 	t.Helper()
 	cfg := &cachex.Config{
 		Name:         "test",
 		Driver:       "redis",
-		Addr:         "127.0.0.1:46379",
-		Password:     "redis123456",
+		Addr:         testRedisAddr(),
+		Password:     testRedisPassword(),
 		DB:           15,
 		PoolSize:     5,
 		Timeout:      2 * time.Second,

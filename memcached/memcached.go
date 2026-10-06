@@ -12,6 +12,7 @@ import (
 	"github.com/gospacex/cachex"
 	"github.com/gospacex/logx"
 	_ "github.com/gospacex/logx/zap"
+	"github.com/gospacex/traceflag"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -229,8 +230,25 @@ func (c *Client) report(command string, start time.Time, err error) {
 
 // startSpan 开启命令 span。tracing 关闭时返回 noop span，
 // 避免 defer span.End() 误结束调用方注入到 ctx 中的 span。
+// traceEnabled 判本实例是否入链。与 redis 驱动同一套裁决顺序：
+//
+//	traceflag 全局总闸 AND 组件闸("cachex")
+//	AND (实例级 EnableTrace OR 全局 SetTracingConfig 打开)
+//
+// 只查 cachex.IsTracingEnabled()（全局）是不够的：只配 instances.<name>.
+// enable_trace 的调用方永远拿不到 span，且不报错。
+func (c *Client) traceEnabled() bool {
+	if !traceflag.EnabledFor("cachex") {
+		return false
+	}
+	if c.cfg != nil && c.cfg.EnableTrace {
+		return true
+	}
+	return cachex.IsTracingEnabled()
+}
+
 func (c *Client) startSpan(ctx context.Context, command string, key string) (context.Context, trace.Span) {
-	if !cachex.IsTracingEnabled() {
+	if !c.traceEnabled() {
 		return ctx, noop.Span{}
 	}
 	ctx, span := c.tracer.Start(ctx, "db.memcached."+command)

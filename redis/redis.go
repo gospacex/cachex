@@ -13,6 +13,7 @@ import (
 	"github.com/gospacex/cachex"
 	"github.com/gospacex/logx"
 	_ "github.com/gospacex/logx/zap"
+	"github.com/gospacex/traceflag"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -294,12 +295,36 @@ func (c *Client) report(command string, start time.Time, err error) {
 	}
 }
 
+// traceEnabled 判本实例是否入链。
+//
+// 为什么实例级开关必须参与裁决：cachex.IsTracingEnabled() 读的是**全局**
+// tracingCfg（只有 SetTracingConfig 能写）。configx / 独立用法下只配
+// instances.<name>.enable_trace 而不调 SetTracingConfig 的话，开关虽然被
+// 解码进 Config.EnableTrace，却没有任何地方读它 —— span 永远为零且不打日志，
+// 表现为「开了埋点但 Jaeger 上一个 redis span 都没有」。
+//
+// 裁决顺序（与其余 x 系列 SDK 对齐）：
+//
+//	traceflag 全局总闸 AND traceflag 组件闸("cachex")
+//	AND (实例级 EnableTrace OR 全局 SetTracingConfig 打开)
+//
+// 最后一层的 OR 是兼容：既保留兜底路径，又让实例级开关真正能单独生效。
+func (c *Client) traceEnabled() bool {
+	if !traceflag.EnabledFor("cachex") {
+		return false
+	}
+	if c.cfg != nil && c.cfg.EnableTrace {
+		return true
+	}
+	return cachex.IsTracingEnabled()
+}
+
 // startSpan 开启命令 span。
 //
 // tracing 关闭时返回 noop span，绝不返回 ctx 中的外部 span——
 // 否则 defer span.End() 会提前结束调用方的 span，破坏上层链路。
 func (c *Client) startSpan(ctx context.Context, command string, key string) (context.Context, trace.Span) {
-	if !cachex.IsTracingEnabled() {
+	if !c.traceEnabled() {
 		return ctx, noop.Span{}
 	}
 	ctx, span := c.tracer.Start(ctx, "db.redis."+command)
