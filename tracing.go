@@ -34,6 +34,15 @@ type TracingConfig struct {
 	Endpoint string `yaml:"endpoint" json:"endpoint" mapstructure:"endpoint"`
 	// SamplerRatio 采样率 0~1（与 dbx 的 tracing.sampler_ratio 对齐）
 	SamplerRatio float64 `yaml:"sampler_ratio" json:"sampler_ratio" mapstructure:"sampler_ratio"`
+	// HostProvider 表示「宿主已注册全局 TracerProvider，SDK 不要抢全局位」。
+	//
+	// 为什么需要：本方法默认会用上面的 exporter 配置自建一个 TracerProvider 并
+	// otel.SetTracerProvider 注册到全局。独立运行（examples / 单测）时这是对的；
+	// 但在 launchx / dbx 这类宿主里，全局 provider 由宿主的 telemetry 步骤注册
+	// （含传播器与服务名资源），SDK 再抢一次会把宿主的整套链路打回 SDK 自带的
+	// exporter —— 其余组件的 span 直接消失，且看不出是谁干的。
+	// 置 true 时只开开关、不初始化任何 provider，span 走的仍是宿主的 provider。
+	HostProvider bool `yaml:"host_provider" json:"host_provider" mapstructure:"host_provider"`
 }
 
 var (
@@ -49,6 +58,9 @@ var (
 //
 // 开关打开且 TracerProvider 尚未初始化时，自动初始化并注册到全局 otel。
 // 初始化失败仅记录错误，不阻断 SDK——调用链降级为不上报，业务读写不受影响。
+//
+// 例外：HostProvider=true 时只登记开关、不初始化 provider（宿主已管起来了，
+// 抢全局位会把宿主其余组件的 span 一并打没，详见 Config.HostProvider）。
 func SetTracingConfig(cfg TracingConfig) {
 	// 接入 hubx 统一调用链开关：组件自身配置为主开关，全局总闸
 	// traceflag.SetEnabled(false) 可一键熔断 cachex。这里同时完成
@@ -59,6 +71,11 @@ func SetTracingConfig(cfg TracingConfig) {
 	tracingCfgMu.Lock()
 	tracingCfg = cfg
 	tracingCfgMu.Unlock()
+
+	if cfg.HostProvider {
+		// 宿主托管模式：只登记开关，绝不碰全局 provider（理由见 Config.HostProvider）。
+		return
+	}
 
 	if !cfg.Enabled {
 		return
