@@ -1,0 +1,26 @@
+# cachex redis 驱动示例配置
+#
+# 默认连本机标准端口 6379（无密码），与 kvx/redis 示例保持一致 —— 本地已有
+# Redis 时可直接 go run . 跑通。
+#
+# ⚠️ 若改用本驱动自带的 cachex/redis/scripts/start.sh 起环境，那套 compose 的
+# redis-server 带 --requirepass redis123456，需要把下面 password 的注释打开
+# （宿主端口同为 6379，被占用时 HOST_PORT=<空闲端口> 覆盖，同步改 addr）。
+#
+# 调用链：enable_trace 打开后缓存操作会产 cachex.* span；宿主侧装配 otelx
+# （TracerProvider + 传播器）后可在 Jaeger 看到，未装配时落在 noop provider
+# 上，不影响功能。
+#
+# 注意 cachex 的配置节是 instances **列表**（不是 kvx 那种 stores map），
+# 每个实例必须写 name —— 实例注册表以 name 为 key。
+cachex:
+  enable_trace: true
+  instances:
+    - name: default
+      driver: redis
+      addr: "127.0.0.1:6379"
+      # password: "redis123456"
+      db: 0
+      pool_size: 10
+      timeout: 5s
+      enable_trace: true
