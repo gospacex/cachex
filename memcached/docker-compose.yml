@@ -1,0 +1,36 @@
+# cachex/memcached（Memcached） - 独立开发环境
+# 用法：scripts/start.sh / scripts/verify.sh / scripts/stop.sh
+# 服务定义与 cachex/docker-compose.yml 中对应段一致，只改了容器名与网络名前缀，
+# 避免与根 compose（一次起全套）重名冲突。
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+
+  memcached:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/memcached:alpine
+    cpus: "0.5"
+    container_name: hubx-cachex-memcached
+    ports:
+      - "${HOST_PORT:-21121}:11211"
+    command: memcached -u memcached -m 128 -p 11211
+    volumes:
+      - ./data/memcached:/var/lib/memcached
+    healthcheck:
+      test: ["CMD-SHELL", "echo stats | nc -w 2 127.0.0.1 11211 | grep -q STAT"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *default-logging
+
+networks:
+  default:
+    name: hubx-cachex-memcached-net
+    driver: bridge
