@@ -3,10 +3,11 @@ module github.com/gospacex/cachex/memcached
 go 1.25.0
 
 require (
-	github.com/gospacex/traceflag v0.0.0
 	github.com/bradfitz/gomemcache v0.0.0-20260422231931-4d751bb6e37c
 	github.com/gospacex/cachex v0.0.0
+	github.com/gospacex/configx v0.0.0
 	github.com/gospacex/logx v0.0.0
+	github.com/gospacex/traceflag v0.0.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/trace v1.46.0
@@ -29,7 +30,6 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gospacex/configx v0.0.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
